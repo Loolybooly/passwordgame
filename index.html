@@ -85,7 +85,6 @@
             <p class="desc">
                 Enter the secret password. If it's correct you'll be redirected.
             </p>
-
             <div class="row" style="margin-bottom: 10px">
                 <input
                     id="pw"
@@ -95,11 +94,9 @@
                 />
                 <button id="try">Try</button>
             </div>
-
             <div class="log" id="log">Checking server for hint...</div>
             <div id="hint" class="reveal" style="display: none"></div>
         </main>
-
         <script>
             const log = (t) => (document.getElementById("log").textContent = t);
             const hintEl = document.getElementById("hint");
@@ -107,7 +104,7 @@
 
             async function checkForPassword() {
                 try {
-                    const resp = await fetch("/get-password", {
+                    const resp = await fetch("/api/get-password", {
                         cache: "no-store",
                     });
                     if (!resp.ok) {
@@ -151,9 +148,8 @@
                     }
                     return;
                 }
-
                 try {
-                    const resp = await fetch("/check", {
+                    const resp = await fetch("/api/check", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ password: attempt }),
