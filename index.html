@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Guess the password — minimal</title>
+        <style>
+            :root {
+                font-family:
+                    Inter,
+                    system-ui,
+                    -apple-system,
+                    "Segoe UI",
+                    Roboto,
+                    "Helvetica Neue",
+                    Arial;
+            }
+            body {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                margin: 0;
+                background: #0f172a;
+                color: #e6eef8;
+            }
+            .card {
+                width: min(520px, 92vw);
+                background: linear-gradient(
+                    180deg,
+                    rgba(255, 255, 255, 0.02),
+                    rgba(255, 255, 255, 0.01)
+                );
+                padding: 28px;
+                border-radius: 12px;
+                box-shadow: 0 6px 30px rgba(2, 6, 23, 0.6);
+            }
+            h1 {
+                margin: 0 0 8px;
+                font-size: 18px;
+            }
+            p.desc {
+                margin: 0 0 18px;
+                color: #9fb0d0;
+            }
+            .row {
+                display: flex;
+                gap: 8px;
+            }
+            input[type="password"] {
+                flex: 1;
+                padding: 10px 12px;
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.06);
+                background: transparent;
+                color: inherit;
+                font-size: 14px;
+            }
+            button {
+                padding: 10px 14px;
+                border-radius: 8px;
+                border: none;
+                background: #2b6cb0;
+                color: white;
+                cursor: pointer;
+            }
+            .log {
+                margin-top: 12px;
+                font-size: 13px;
+                color: #9fb0d0;
+                min-height: 22px;
+            }
+            .reveal {
+                margin-top: 12px;
+                padding: 8px;
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.02);
+                font-family: monospace;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="card">
+            <h1>Guess the password</h1>
+            <p class="desc">
+                Enter the secret password. If it's correct you'll be redirected.
+            </p>
+
+            <div class="row" style="margin-bottom: 10px">
+                <input
+                    id="pw"
+                    type="password"
+                    placeholder="enter password"
+                    autocomplete="off"
+                />
+                <button id="try">Try</button>
+            </div>
+
+            <div class="log" id="log">Checking server for hint...</div>
+            <div id="hint" class="reveal" style="display: none"></div>
+        </main>
+
+        <script>
+            const log = (t) => (document.getElementById("log").textContent = t);
+            const hintEl = document.getElementById("hint");
+            let revealedPassword = null;
+
+            async function checkForPassword() {
+                try {
+                    const resp = await fetch("/get-password", {
+                        cache: "no-store",
+                    });
+                    if (!resp.ok) {
+                        log("Server returned an error.");
+                        return;
+                    }
+                    const j = await resp.json();
+                    if (j && j.allowed) {
+                        revealedPassword = j.password;
+                        hintEl.style.display = "block";
+                        hintEl.textContent = revealedPassword;
+                        log("A password was revealed to your IP.");
+                    } else {
+                        log(
+                            "No hint available for your IP. Try to guess the password.",
+                        );
+                    }
+                } catch (e) {
+                    log("Unable to contact server.");
+                }
+            }
+
+            document
+                .getElementById("try")
+                .addEventListener("click", tryPassword);
+            document.getElementById("pw").addEventListener("keydown", (e) => {
+                if (e.key === "Enter") tryPassword();
+            });
+
+            async function tryPassword() {
+                const attempt = document.getElementById("pw").value || "";
+                if (revealedPassword !== null) {
+                    if (attempt === revealedPassword) {
+                        log("Correct — redirecting...");
+                        window.location.href =
+                            "https://www.youtube.com/watch?v=9BalEldzE8o";
+                    } else {
+                        log(
+                            "Wrong — the server revealed the password to your IP earlier.",
+                        );
+                    }
+                    return;
+                }
+
+                try {
+                    const resp = await fetch("/check", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ password: attempt }),
+                    });
+                    if (!resp.ok) {
+                        log("Server error during check.");
+                        return;
+                    }
+                    const j = await resp.json();
+                    if (j && j.ok) {
+                        log("Correct — redirecting...");
+                        window.location.href =
+                            j.redirect ||
+                            "https://www.youtube.com/watch?v=9BalEldzE8o";
+                    } else {
+                        log("Incorrect password. Keep trying.");
+                    }
+                } catch (e) {
+                    log("Unable to contact server for verification.");
+                }
+            }
+
+            checkForPassword();
+        </script>
+    </body>
+</html>
