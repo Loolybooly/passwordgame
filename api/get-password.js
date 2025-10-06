@@ -1,6 +1,6 @@
 export default function handler(req, res) {
   const TRUSTED_IP = "5.29.13.210";
-  const REAL_PASSWORD = process.env.REAL_PASSWORD || "gayballs";
+  const REAL_PASSWORD = process.env.REAL_PASSWORD;
 
   const clientIp =
     req.headers["x-forwarded-for"]?.split(",")[0] ||
