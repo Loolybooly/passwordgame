@@ -3,7 +3,22 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
-        <title>Guess the password — minimal</title>
+        <!-- discord embed -->
+        <meta property="og:title" content="Password Game" />
+        <meta property="og:description" content="Guess The Password" />
+        <meta property="og:image" content="https://i.imgur.com/2aFRlvv.png" />
+        <meta property="og:url" content="https://guessthepassword.vercel.app" />
+        <meta property="og:type" content="website" />
+        <link rel="icon" href="https://i.imgur.com/sPxq6s5.png" type="image/png">
+
+        <!-- twitter (NOT X) embed u STUPID elon -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Password Games" />
+        <meta name="twitter:description" content="Guess The Password" />
+        <meta name="twitter:image" content="https://i.imgur.com/2aFRlvv.png" />
+        <meta name="twitter:url" content="https://guessthepassword.vercel.app" />
+        <meta name="twitter:site" content="@LoolyTunes" />
+        <title>Guess the password</title>
         <style>
             :root {
                 font-family:
@@ -82,9 +97,7 @@
     <body>
         <main class="card">
             <h1>Guess the password</h1>
-            <p class="desc">
-                Enter the secret password. If it's correct you'll be redirected.
-            </p>
+            <p class="desc">Hint: no</p>
             <div class="row" style="margin-bottom: 10px">
                 <input
                     id="pw"
@@ -92,15 +105,33 @@
                     placeholder="enter password"
                     autocomplete="off"
                 />
-                <button id="try">Try</button>
+                <button id="try">Fondle</button>
             </div>
-            <div class="log" id="log">Checking server for hint...</div>
+            <div class="log" id="log">Seeing if ur me or a damn CLONE</div>
             <div id="hint" class="reveal" style="display: none"></div>
         </main>
         <script>
             const log = (t) => (document.getElementById("log").textContent = t);
-            const hintEl = document.getElementById("hint");
+            const descEl = document.querySelector(".desc");
+
+            const sleep = (ms) =>
+                new Promise((resolve) => setTimeout(resolve, ms));
             let revealedPassword = null;
+            let attempts = 0;
+
+            function getDescForAttempts(n) {
+                if (revealedPassword !== null)
+                    return "Password revealed! Non-clone confirmed.";
+                if (n >= 8) return "Final hint: The password is made of balls";
+                if (n >= 5) return "Large hint: Think of a rainbow.";
+                if (n >= 3)
+                    return "Referenced hint: The password is a reference to one of my more known websites.";
+                if (n >= 1) return "Hint: The password is gay.";
+            }
+
+            function updateDescUI() {
+                descEl.textContent = getDescForAttempts(attempts);
+            }
 
             async function checkForPassword() {
                 try {
@@ -108,22 +139,22 @@
                         cache: "no-store",
                     });
                     if (!resp.ok) {
-                        log("Server returned an error.");
+                        updateDescUI();
                         return;
                     }
                     const j = await resp.json();
-                    if (j && j.allowed) {
+                    if (j && j.allowed && j.password) {
                         revealedPassword = j.password;
-                        hintEl.style.display = "block";
-                        hintEl.textContent = revealedPassword;
-                        log("A password was revealed to your IP.");
-                    } else {
+                        descEl.textContent =
+                            "Password revealed! Non-clone confirmed.";
                         log(
-                            "No hint available for your IP. Try to guess the password.",
+                            "The password has been revealed, non-clone confirmed.",
                         );
+                    } else {
+                        updateDescUI();
                     }
                 } catch (e) {
-                    log("Unable to contact server.");
+                    updateDescUI();
                 }
             }
 
@@ -136,6 +167,7 @@
 
             async function tryPassword() {
                 const attempt = document.getElementById("pw").value || "";
+
                 if (revealedPassword !== null) {
                     if (attempt === revealedPassword) {
                         log("Correct — redirecting...");
@@ -143,11 +175,12 @@
                             "https://www.youtube.com/watch?v=9BalEldzE8o";
                     } else {
                         log(
-                            "Wrong — the server revealed the password to your IP earlier.",
+                            "HOW CAN YOU GET IT WRONG WHEN YOU LITERALLY HAVE THE PASSWORD IN FRONT OF YOU!?",
                         );
                     }
                     return;
                 }
+
                 try {
                     const resp = await fetch("/api/check", {
                         method: "POST",
@@ -155,20 +188,26 @@
                         body: JSON.stringify({ password: attempt }),
                     });
                     if (!resp.ok) {
-                        log("Server error during check.");
+                        log("Server error idk like maybe 404 405?");
                         return;
                     }
                     const j = await resp.json();
                     if (j && j.ok) {
+                        attempts = 0;
+                        updateDescUI();
                         log("Correct — redirecting...");
                         window.location.href =
                             j.redirect ||
                             "https://www.youtube.com/watch?v=9BalEldzE8o";
                     } else {
-                        log("Incorrect password. Keep trying.");
+                        attempts++;
+                        updateDescUI();
+                        log("Fondling...");
+                        await sleep(1200);
+                        log("Re-fondle a different password.");
                     }
                 } catch (e) {
-                    log("Unable to contact server for verification.");
+                    log("Oopsies, error :3");
                 }
             }
 
