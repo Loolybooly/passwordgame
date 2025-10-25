@@ -18,106 +18,51 @@
         <meta name="twitter:image" content="https://i.imgur.com/2aFRlvv.png" />
         <meta name="twitter:url" content="https://guessthepassword.vercel.app" />
         <meta name="twitter:site" content="@LoolyTunes" />
-        <title>Guess the password</title>
-        <style>
-            :root {
-                font-family:
-                    Inter,
-                    system-ui,
-                    -apple-system,
-                    "Segoe UI",
-                    Roboto,
-                    "Helvetica Neue",
-                    Arial;
-            }
-            body {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                min-height: 100vh;
-                margin: 0;
-                background: #0f172a;
-                color: #e6eef8;
-            }
-            .card {
-                width: min(520px, 92vw);
-                background: linear-gradient(
-                    180deg,
-                    rgba(255, 255, 255, 0.02),
-                    rgba(255, 255, 255, 0.01)
-                );
-                padding: 28px;
-                border-radius: 12px;
-                box-shadow: 0 6px 30px rgba(2, 6, 23, 0.6);
-            }
-            h1 {
-                margin: 0 0 8px;
-                font-size: 18px;
-            }
-            p.desc {
-                margin: 0 0 18px;
-                color: #9fb0d0;
-            }
-            .row {
-                display: flex;
-                gap: 8px;
-            }
-            input[type="password"] {
-                flex: 1;
-                padding: 10px 12px;
-                border-radius: 8px;
-                border: 1px solid rgba(255, 255, 255, 0.06);
-                background: transparent;
-                color: inherit;
-                font-size: 14px;
-            }
-            button {
-                padding: 10px 14px;
-                border-radius: 8px;
-                border: none;
-                background: #2b6cb0;
-                color: white;
-                cursor: pointer;
-            }
-            .log {
-                margin-top: 12px;
-                font-size: 13px;
-                color: #9fb0d0;
-                min-height: 22px;
-            }
-            .reveal {
-                margin-top: 12px;
-                padding: 8px;
-                border-radius: 8px;
-                background: rgba(255, 255, 255, 0.02);
-                font-family: monospace;
-            }
-        </style>
+        <title>Password Verification</title>
+        <link rel="stylesheet" href="style.css">
     </head>
     <body>
         <main class="card">
-            <h1>Guess the password</h1>
-            <p class="desc">Hint: no</p>
+            <h1>Password Verification</h1>
+            <p class="desc">Enter the correct password to proceed</p>
             <div class="row" style="margin-bottom: 10px">
-                <input
-                    id="pw"
-                    type="password"
-                    placeholder="enter password"
-                    autocomplete="off"
-                />
-                <button id="try">Fondle</button>
+                <div class="password-toggle">
+                    <input
+                        id="pw"
+                        type="password"
+                        placeholder="enter password"
+                        autocomplete="off"
+                    />
+                    <button id="togglePw" type="button" title="Show password">👁</button>
+                </div>
+                <button id="try" title="Try Password">✓</button>
             </div>
-            <div class="log" id="log">Seeing if ur me or a damn CLONE</div>
+            <div class="log" id="log">Ready to verify your identity...</div>
+            <div class="attempt-counter" id="attemptCounter"></div>
             <div id="hint" class="reveal" style="display: none"></div>
         </main>
         <script>
-            const log = (t) => (document.getElementById("log").textContent = t);
+            const log = (t, type = '') => {
+                const logEl = document.getElementById("log");
+                if (type === 'loading') {
+                    logEl.innerHTML = '<span class="loading"></span>' + t;
+                } else if (type === 'success') {
+                    logEl.innerHTML = '<span class="success">✓</span> ' + t;
+                } else if (type === 'error') {
+                    logEl.innerHTML = '<span class="error">✗</span> ' + t;
+                } else {
+                    logEl.textContent = t;
+                }
+            };
             const descEl = document.querySelector(".desc");
+            const tryButton = document.getElementById("try");
+            const attemptCounter = document.getElementById("attemptCounter");
 
             const sleep = (ms) =>
                 new Promise((resolve) => setTimeout(resolve, ms));
             let revealedPassword = null;
             let attempts = 0;
+            let isChecking = false;
 
             function getDescForAttempts(n) {
                 if (revealedPassword !== null)
@@ -127,10 +72,12 @@
                 if (n >= 3)
                     return "Referenced hint: The password is a reference to one of my more known websites.";
                 if (n >= 1) return "Hint: The password is gay.";
+                return "Hint: no";
             }
 
             function updateDescUI() {
                 descEl.textContent = getDescForAttempts(attempts);
+                attemptCounter.textContent = attempts > 0 ? `Attempts: ${attempts}` : '';
             }
 
             async function checkForPassword() {
@@ -165,50 +112,87 @@
                 if (e.key === "Enter") tryPassword();
             });
 
+            const passwordInput = document.getElementById("pw");
+            const toggleButton = document.getElementById("togglePw");
+
+            toggleButton.addEventListener("click", () => {
+                if (passwordInput.type === "password") {
+                    passwordInput.type = "text";
+                    toggleButton.textContent = "🙈";
+                    toggleButton.title = "Hide password";
+                } else {
+                    passwordInput.type = "password";
+                    toggleButton.textContent = "👁";
+                    toggleButton.title = "Show password";
+                }
+            });
+
             async function tryPassword() {
+                if (isChecking) return;
+
                 const attempt = document.getElementById("pw").value || "";
+                if (!attempt.trim()) {
+                    log("Please enter a password.", 'error');
+                    return;
+                }
+
+                document.getElementById("pw").value = "";
+                tryButton.disabled = true;
+                tryButton.innerHTML = '<span class="loading" style="width: 16px; height: 16px; margin: 0;"></span>';
+                isChecking = true;
 
                 if (revealedPassword !== null) {
                     if (attempt === revealedPassword) {
-                        log("Correct — redirecting...");
+                        log("Correct — redirecting...", 'success');
+                        await sleep(1000);
                         window.location.href =
                             "https://www.youtube.com/watch?v=9BalEldzE8o";
                     } else {
                         log(
                             "HOW CAN YOU GET IT WRONG WHEN YOU LITERALLY HAVE THE PASSWORD IN FRONT OF YOU!?",
+                            'error'
                         );
                     }
+                    resetButton();
                     return;
                 }
 
                 try {
+                    log("Checking password...", 'loading');
                     const resp = await fetch("/api/check", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ password: attempt }),
                     });
                     if (!resp.ok) {
-                        log("Server error idk like maybe 404 405?");
+                        log("Server error. Please try again.", 'error');
+                        resetButton();
                         return;
                     }
                     const j = await resp.json();
                     if (j && j.ok) {
                         attempts = 0;
                         updateDescUI();
-                        log("Correct — redirecting...");
+                        log("Correct — redirecting...", 'success');
+                        await sleep(1000);
                         window.location.href =
                             j.redirect ||
                             "https://www.youtube.com/watch?v=9BalEldzE8o";
                     } else {
                         attempts++;
                         updateDescUI();
-                        log("Fondling...");
-                        await sleep(1200);
-                        log("Re-fondle a different password.");
+                        log("Try a different password.", 'error');
                     }
                 } catch (e) {
-                    log("Oopsies, error :3");
+                    log("Connection error. Please try again.", 'error');
                 }
+                resetButton();
+            }
+
+            function resetButton() {
+                tryButton.disabled = false;
+                tryButton.innerHTML = "✓";
+                isChecking = false;
             }
 
             checkForPassword();
